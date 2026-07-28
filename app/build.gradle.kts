@@ -8,6 +8,11 @@ android {
     namespace = "com.linenfeng.mtdownloader"
     compileSdk = 34
 
+    // Termux 环境：禁用 aapt2 守护进程，避免进程通信问题
+    aaptOptions {
+        additionalParameters("--no-version-vectors")
+    }
+
     defaultConfig {
         applicationId = "com.linenfeng.mtdownloader"
         minSdk = 24
