@@ -15,6 +15,8 @@ class DownloadRepository(private val dao: DownloadDao) {
 
     suspend fun getById(id: Long): DownloadEntity? = dao.getById(id)
 
+    suspend fun getByStatus(statuses: List<Int>): List<DownloadEntity> = dao.getByStatus(statuses)
+
     suspend fun insert(entity: DownloadEntity): Long = dao.insert(entity)
 
     suspend fun update(entity: DownloadEntity) = dao.update(entity)

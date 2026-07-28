@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -249,7 +250,7 @@ class DownloadRunner(
         var attempt = 0
         while (true) {
             try {
-                ensureActive()
+                coroutineContext[Job]?.ensureActive()
                 downloadBlockOnce(block)
                 return
             } catch (e: CancellationException) {
@@ -297,7 +298,7 @@ class DownloadRunner(
             val buffer = ByteArray(BUFFER_SIZE)
             var lastFlush = System.currentTimeMillis()
             while (true) {
-                coroutineContext.ensureActive()
+                coroutineContext[Job]?.ensureActive()
                 val read = input.read(buffer)
                 if (read <= 0) break
                 raf.write(buffer, 0, read)
@@ -325,7 +326,7 @@ class DownloadRunner(
         var lastDownloaded = currentDownloaded()
         while (true) {
             delay(PROGRESS_INTERVAL_MS)
-            ensureActive()
+            coroutineContext[Job]?.ensureActive()
             val now = System.currentTimeMillis()
             val cur = currentDownloaded()
             val dt = (now - lastTime).coerceAtLeast(1)
