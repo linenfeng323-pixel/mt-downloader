@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">多线程下载</string>
+    <string name="app_author">林恩风</string>
+    <string name="app_version">v1.0.0</string>
+    <string name="app_slogan">极速 · 稳定 · 多线程下载器</string>
+
+    <!-- Navigation -->
+    <string name="nav_downloads">下载列表</string>
+    <string name="nav_add">新建下载</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_about">关于</string>
+
+    <!-- Actions -->
+    <string name="action_start">开始</string>
+    <string name="action_pause">暂停</string>
+    <string name="action_resume">继续</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_delete">删除</string>
+    <string name="action_retry">重试</string>
+    <string name="action_open">打开文件</string>
+    <string name="action_pause_all">全部暂停</string>
+    <string name="action_start_all">全部开始</string>
+    <string name="action_clear_done">清除已完成</string>
+    <string name="action_add">添加下载</string>
+    <string name="action_paste_url">粘贴链接</string>
+    <string name="action_clipboard_url">从剪贴板导入</string>
+    <string name="action_save">保存</string>
+    <string name="action_back">返回</string>
+
+    <!-- States -->
+    <string name="state_waiting">等待中</string>
+    <string name="state_downloading">下载中</string>
+    <string name="state_paused">已暂停</string>
+    <string name="state_completed">已完成</string>
+    <string name="state_failed">失败</string>
+    <string name="state_canceled">已取消</string>
+
+    <!-- Add task -->
+    <string name="hint_url">请输入下载链接 (http/https)</string>
+    <string name="hint_filename">文件名（可留空自动识别）</string>
+    <string name="hint_threads">线程数</string>
+    <string name="hint_headers">自定义请求头（每行一条，例如 Referer: xxx）</string>
+    <string name="label_threads">线程数</string>
+    <string name="label_block_size">分块大小</string>
+    <string name="label_save_path">保存路径</string>
+    <string name="label_filename">文件名</string>
+
+    <!-- Settings -->
+    <string name="settings_general">通用设置</string>
+    <string name="settings_max_tasks">同时下载任务数</string>
+    <string name="settings_default_threads">默认线程数</string>
+    <string name="settings_retry_count">失败重试次数</string>
+    <string name="settings_save_dir">下载保存目录</string>
+    <string name="settings_use_public_dir">使用公共下载目录</string>
+    <string name="settings_use_public_dir_summary">需要“所有文件访问权限”，默认使用应用专属下载目录</string>
+    <string name="settings_auto_retry">失败自动重试</string>
+    <string name="settings_wifi_only">仅 Wi-Fi 下载</string>
+    <string name="settings_notify_sound">完成通知声音</string>
+    <string name="settings_theme">主题模式</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_download">下载服务</string>
+    <string name="notif_channel_download_desc">显示当前下载进度与状态</string>
+    <string name="notif_channel_done">下载完成</string>
+    <string name="notif_channel_done_desc">下载完成时提示</string>
+    <string name="notif_channel_error">下载异常</string>
+    <string name="notif_channel_error_desc">下载失败或出错时提示</string>
+    <string name="notif_downloading">%1$s · %2$s/s · 剩余 %3$s</string>
+    <string name="notif_completed">已完成：%1$s</string>
+    <string name="notif_failed">下载失败：%1$s</string>
+
+    <!-- About -->
+    <string name="about_app">多线程下载是一款基于 Android 原生 Jetpack Compose 构建的轻量下载器，支持多线程分块下载、断点续传、失败重试、批量管理与自定义请求头。</string>
+    <string name="about_author">作者：林恩风</string>
+    <string name="about_features">核心特性</string>
+    <string name="about_tech">技术栈</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_url">无效的下载链接</string>
+    <string name="error_no_network">当前无网络连接</string>
+    <string name="error_no_space">存储空间不足</string>
+    <string name="error_unknown">未知错误：%1$s</string>
+    <string name="error_file_create">无法创建下载文件</string>
+
+    <!-- Misc -->
+    <string name="empty_downloads">还没有下载任务\n点击 + 添加你的第一个下载</string>
+    <string name="confirm_delete">确定删除该任务及其文件吗？</string>
+    <string name="confirm_delete_task">确定删除该任务吗？（保留文件）</string>
+    <string name="dialog_ok">确定</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_delete_task">仅删任务</string>
+    <string name="dialog_delete_all">任务和文件</string>
+    <string name="copied">已复制</string>
+    <string name="permission_required">需要通知权限以显示下载进度</string>
+    <string name="permission_grant">授予</string>
+    <string name="storage_permission_required">需要存储权限以写入公共下载目录</string>
+    <string name="copied_url">链接已填入</string>
+    <string name="download_added">已添加下载任务</string>
+    <string name="speed_format">%1$s/s</string>
+    <string name="size_format">%1$s / %2$s</string>
+</resources>
