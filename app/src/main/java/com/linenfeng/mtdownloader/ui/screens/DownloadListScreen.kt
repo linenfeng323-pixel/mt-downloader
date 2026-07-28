@@ -397,12 +397,15 @@ private fun DownloadCard(
                 )
                 Row {
                     when (item.status) {
-                        DownloadStatus.WAITING, DownloadStatus.PAUSED, DownloadStatus.FAILED, DownloadStatus.CANCELED -> {
-                            if (item.status == DownloadStatus.FAILED || item.status == DownloadStatus.CANCELED) {
-                                ActionIcon(Icons.Filled.Refresh, "重试", onRetry)
-                            } else {
-                                ActionIcon(Icons.Filled.PlayArrow, "继续", onResume)
-                            }
+                        DownloadStatus.WAITING -> {
+                            ActionIcon(Icons.Filled.Pause, "暂停", onPause)
+                            ActionIcon(Icons.Filled.Close, "取消", onCancel)
+                        }
+                        DownloadStatus.PAUSED -> {
+                            ActionIcon(Icons.Filled.PlayArrow, "继续", onResume)
+                        }
+                        DownloadStatus.FAILED, DownloadStatus.CANCELED -> {
+                            ActionIcon(Icons.Filled.Refresh, "重试", onRetry)
                         }
                         DownloadStatus.DOWNLOADING -> {
                             ActionIcon(Icons.Filled.Pause, "暂停", onPause)

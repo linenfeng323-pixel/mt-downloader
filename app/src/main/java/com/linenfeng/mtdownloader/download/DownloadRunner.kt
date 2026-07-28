@@ -14,13 +14,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -70,7 +67,6 @@ class DownloadRunner(
     private var canceled = false
 
     private val blockProgress = ConcurrentHashMap<Int, AtomicLong>()
-    private val blockLocks = ConcurrentHashMap<Int, Mutex>()
 
     private var totalSize: Long = initial.totalSize
     private var supportRange: Boolean = initial.supportRange
@@ -97,6 +93,7 @@ class DownloadRunner(
     suspend fun pause() {
         paused = true
         job?.cancelAndJoinSafely()
+        syncBlockProgress()
         persistProgress(DownloadStatus.PAUSED)
         onState(DownloadStatus.PAUSED)
     }
@@ -195,11 +192,10 @@ class DownloadRunner(
 
     private fun prepareBlocks() {
         if (!supportRange || totalSize <= 0) {
-            // 不支持断点续传或未知大小：单线程从头下载，已下载进度清零
+            // 不支持断点续传或未知大小：单线程从头下载
             val end = if (totalSize > 0) totalSize - 1 else Long.MAX_VALUE
             blocks = listOf(BlockInfo(0, 0, end, 0L))
             blockProgress[0] = AtomicLong(0L)
-            blockLocks[0] = Mutex()
             return
         }
         // 从持久化数据恢复断点
@@ -214,7 +210,6 @@ class DownloadRunner(
         }
         blocks.forEach { b ->
             blockProgress[b.index] = AtomicLong(b.downloaded)
-            blockLocks[b.index] = Mutex()
         }
     }
 
@@ -228,7 +223,6 @@ class DownloadRunner(
             }
         }
     }.getOrElse {
-        // 文件创建失败属于致命错误
         throw IllegalStateException("无法创建下载文件: ${entity.filePath}")
     }
 
@@ -237,7 +231,6 @@ class DownloadRunner(
             scope.launch { downloadBlock(block) }
         }
         jobs.forEach { it.join() }
-        // 任一块失败会抛出异常冒泡到 runDownload
     }
 
     private suspend fun runSingleBlock() {
@@ -295,21 +288,25 @@ class DownloadRunner(
             }
             input = resp.body?.byteStream()
                 ?: throw IllegalStateException("响应体为空")
+            // 使用大缓冲区提升下载速度
             val buffer = ByteArray(BUFFER_SIZE)
             var lastFlush = System.currentTimeMillis()
+            var bytesReadSinceFlush = 0L
             while (true) {
                 coroutineContext[Job]?.ensureActive()
                 val read = input.read(buffer)
                 if (read <= 0) break
                 raf.write(buffer, 0, read)
-                blockProgress[block.index]?.addAndGet(read.toLong())
-                block.downloaded = blockProgress[block.index]?.get() ?: block.downloaded
+                val progress = blockProgress[block.index]
+                progress?.addAndGet(read.toLong())
 
-                // 间歇性 fsync，避免频繁刷盘
+                // 每 8MB 刷一次盘，避免频繁 fsync 拖慢速度
+                bytesReadSinceFlush += read
                 val now = System.currentTimeMillis()
-                if (now - lastFlush > 2000) {
+                if (bytesReadSinceFlush >= FLUSH_THRESHOLD_BYTES || now - lastFlush > 5000) {
                     raf.fd.sync()
                     lastFlush = now
+                    bytesReadSinceFlush = 0
                 }
             }
             raf.fd.sync()
@@ -334,11 +331,12 @@ class DownloadRunner(
             val remaining = if (speed > 0 && totalSize > 0) {
                 ((totalSize - cur) * 1000 / speed)
             } else 0L
+            // 同步 block.downloaded 用于 UI 显示线程数
+            syncBlockProgress()
             val info = ProgressInfo(
                 taskId = id,
                 status = DownloadStatus.DOWNLOADING,
                 downloaded = cur,
-                // 未知大小时 total 传 0，UI 显示为不确定进度
                 total = if (totalSize > 0) totalSize else 0L,
                 speed = speed,
                 remainingMs = remaining,
@@ -353,20 +351,25 @@ class DownloadRunner(
         }
     }
 
+    /** 将 AtomicLong 的实时进度同步回 BlockInfo.downloaded，用于 UI/持久化 */
+    private fun syncBlockProgress() {
+        blocks.forEach { b ->
+            val atomic = blockProgress[b.index] ?: return@forEach
+            b.downloaded = atomic.get().coerceAtLeast(0L)
+        }
+    }
+
     private fun currentDownloaded(): Long =
         if (blocks.isEmpty()) entity.downloadedSize
         else blockProgress.values.sumOf { it.get() }
 
     private suspend fun finalizeDownload() {
         val cur = currentDownloaded()
-        // 未知大小时，将实际下载量作为最终大小
         val finalTotal = if (totalSize > 0) totalSize else cur
         if (totalSize > 0 && cur < totalSize && !canceled) {
-            // 未下载完整
             fail("下载不完整 ($cur / $totalSize)")
             return
         }
-        // 完成
         entity = entity.copy(
             status = DownloadStatus.COMPLETED.value,
             downloadedSize = finalTotal,
@@ -425,12 +428,6 @@ class DownloadRunner(
         runCatching {
             val file = File(entity.filePath)
             if (file.exists()) file.delete()
-            // 清理分块临时文件（兼容旧版）
-            file.parentFile?.listFiles()?.forEach { f ->
-                if (f.name.endsWith(Constants.SUFFIX_PART) || f.name.endsWith(Constants.SUFFIX_TMP)) {
-                    f.delete()
-                }
-            }
         }
     }
 
@@ -443,10 +440,8 @@ class DownloadRunner(
     }
 
     private fun parseContentLength(resp: Response): Long {
-        // 优先 Content-Range
         val contentRange = resp.header("Content-Range")
         if (!contentRange.isNullOrBlank()) {
-            // bytes 0-0/12345
             val slash = contentRange.indexOf('/')
             if (slash >= 0) {
                 return contentRange.substring(slash + 1).trim().toLongOrNull() ?: -1L
@@ -461,13 +456,10 @@ class DownloadRunner(
 
     companion object {
         const val DEFAULT_UA = "MtDownloader/1.0 (Android; linenfeng)"
-        const val BUFFER_SIZE = 16 * 1024
+        // 64KB 缓冲区，大幅提升下载吞吐量
+        const val BUFFER_SIZE = 64 * 1024
+        // 每 8MB 才刷一次盘，避免 fsync 拖慢速度
+        const val FLUSH_THRESHOLD_BYTES = 8L * 1024 * 1024
         const val PROGRESS_INTERVAL_MS = 500L
     }
-}
-
-/** 引擎对外引用的常量占位（避免直接 import 全部） */
-private object Constants {
-    const val SUFFIX_PART = ".part"
-    const val SUFFIX_TMP = ".tmp"
 }

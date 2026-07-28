@@ -48,11 +48,22 @@ class DownloadEngine(
 
     val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.SECONDS)  // 0 = 无超时，大文件下载不会被中断
+        .writeTimeout(0, TimeUnit.SECONDS)  // 0 = 无超时
         .followRedirects(true)
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
+        // 配置连接池，支持多线程并发下载
+        .connectionPool(okhttp3.ConnectionPool(
+            50,  // 最大空闲连接数
+            5,   // 空闲存活分钟数
+            TimeUnit.MINUTES
+        ))
+        // 配置 Dispatcher 支持高并发
+        .dispatcher(okhttp3.Dispatcher().apply {
+            maxRequests = 128          // 最大并发请求
+            maxRequestsPerHost = 64    // 单主机最大并发
+        })
         .build()
 
     private val runners = ConcurrentHashMap<Long, DownloadRunner>()
@@ -152,11 +163,20 @@ class DownloadEngine(
 
     /** 继续（恢复） */
     suspend fun resume(id: Long) {
-        val runner = runners[id] ?: return
-        if (runner.isRunning) return
+        // 如果 runner 还在且没运行，直接重新调度
+        val existing = runners[id]
+        if (existing != null && !existing.isRunning) {
+            repository.updateStatus(id, DownloadStatus.WAITING)
+            updateState(id, DownloadStatus.WAITING)
+            scheduleOrQueue(id)
+            return
+        }
+        if (existing != null && existing.isRunning) return
+        // runner 已被清理（比如完成后或 app 重启后），从数据库恢复
+        val entity = repository.getById(id) ?: return
+        if (entity.statusEnum == DownloadStatus.COMPLETED) return
         repository.updateStatus(id, DownloadStatus.WAITING)
-        updateState(id, DownloadStatus.WAITING)
-        scheduleOrQueue(id)
+        enqueue(entity.copy(status = DownloadStatus.WAITING.value))
     }
 
     /** 取消（删除文件，标记已取消） */
