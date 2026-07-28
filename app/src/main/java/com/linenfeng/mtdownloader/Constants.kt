@@ -49,4 +49,7 @@ object Constants {
 
     /** DataStore 名称 */
     const val SETTINGS_NAME = "mt_settings"
+
+    /** GitHub 源码地址 */
+    const val GITHUB_REPO_URL = "https://github.com/linenfeng323-pixel/mt-downloader"
 }

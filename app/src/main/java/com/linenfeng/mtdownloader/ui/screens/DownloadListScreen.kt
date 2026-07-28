@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.MoreVert
@@ -82,7 +83,8 @@ fun DownloadListScreen(
     viewModel: DownloadViewModel,
     onAddClick: () -> Unit,
     onOpenAbout: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenConverter: () -> Unit
 ) {
     val tasks by viewModel.tasks.collectAsState()
     val totalSpeed by viewModel.totalSpeed.collectAsState()
@@ -133,9 +135,15 @@ fun DownloadListScreen(
                 totalSpeed = totalSpeed,
                 totalTasks = tasks.size,
                 onMenu = { menuOpen = true },
-                onOpenAbout = onOpenAbout
+                onOpenAbout = onOpenAbout,
+                onOpenConverter = onOpenConverter
             )
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text("🔧 域名转换器") },
+                    onClick = { onOpenConverter(); menuOpen = false },
+                    leadingIcon = { Icon(Icons.Filled.Bolt, null) }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_pause_all)) },
                     onClick = { viewModel.pauseAll(); menuOpen = false },
@@ -226,7 +234,8 @@ private fun Header(
     totalSpeed: Long,
     totalTasks: Int,
     onMenu: () -> Unit,
-    onOpenAbout: () -> Unit
+    onOpenAbout: () -> Unit,
+    onOpenConverter: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -248,6 +257,9 @@ private fun Header(
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.85f)
                     )
+                }
+                IconButton(onClick = onOpenConverter) {
+                    Icon(Icons.Filled.AutoAwesome, contentDescription = "域名转换器", tint = Color.White)
                 }
                 IconButton(onClick = onOpenAbout) {
                     Icon(Icons.Filled.Bolt, contentDescription = "关于", tint = Color.White)

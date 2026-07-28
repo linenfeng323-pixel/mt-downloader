@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import com.linenfeng.mtdownloader.ui.screens.AboutScreen
 import com.linenfeng.mtdownloader.ui.screens.AddTaskScreen
 import com.linenfeng.mtdownloader.ui.screens.DownloadListScreen
+import com.linenfeng.mtdownloader.ui.screens.DomainConverterScreen
 import com.linenfeng.mtdownloader.ui.screens.SettingsScreen
 import com.linenfeng.mtdownloader.ui.theme.MtDownloaderTheme
 import com.linenfeng.mtdownloader.ui.viewmodel.DownloadViewModel
@@ -78,7 +79,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Screen { LIST, ADD, SETTINGS, ABOUT }
+private enum class Screen { LIST, ADD, SETTINGS, ABOUT, DOMAIN_CONVERTER }
 
 @Composable
 private fun AppNavigation(viewModel: DownloadViewModel, initialUrl: String?) {
@@ -107,7 +108,8 @@ private fun AppNavigation(viewModel: DownloadViewModel, initialUrl: String?) {
                     currentName = Screen.ADD.name
                 },
                 onOpenAbout = { currentName = Screen.ABOUT.name },
-                onOpenSettings = { currentName = Screen.SETTINGS.name }
+                onOpenSettings = { currentName = Screen.SETTINGS.name },
+                onOpenConverter = { currentName = Screen.DOMAIN_CONVERTER.name }
             )
             Screen.ADD -> AddTaskScreen(
                 viewModel = viewModel,
@@ -121,6 +123,13 @@ private fun AppNavigation(viewModel: DownloadViewModel, initialUrl: String?) {
             )
             Screen.ABOUT -> AboutScreen(
                 onBack = { currentName = Screen.LIST.name }
+            )
+            Screen.DOMAIN_CONVERTER -> DomainConverterScreen(
+                onBack = { currentName = Screen.LIST.name },
+                onDownload = { url ->
+                    addInitialUrl = url
+                    currentName = Screen.ADD.name
+                }
             )
         }
     }

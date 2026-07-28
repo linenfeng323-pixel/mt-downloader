@@ -148,9 +148,24 @@ class DownloadRunner(
             // 7. 校验并完成
             finalizeDownload()
         } catch (e: CancellationException) {
-            // 暂停或取消引发的，进度已在 pause/cancel 中处理
+            // 暂停或取消引发的
+            syncBlockProgress()
+            if (canceled) {
+                cleanupFiles()
+                repository.updateError(id, null, DownloadStatus.CANCELED, entity.retries)
+                entity = entity.copy(status = DownloadStatus.CANCELED.value, downloadedSize = 0)
+                _progress.value = ProgressInfo.idle(id, DownloadStatus.CANCELED, 0, 0)
+                onState(DownloadStatus.CANCELED)
+                onFinished(this)
+            } else if (paused) {
+                persistProgress(DownloadStatus.PAUSED)
+                onState(DownloadStatus.PAUSED)
+            } else {
+                persistProgress(entity.statusEnum)
+            }
             throw e
         } catch (e: Throwable) {
+            syncBlockProgress()
             fail(e.message ?: e.javaClass.simpleName)
         }
     }
